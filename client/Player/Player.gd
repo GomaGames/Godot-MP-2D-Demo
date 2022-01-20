@@ -62,12 +62,17 @@ func is_local_player() -> bool:
 
 # from network
 func update_state() -> void:
-	var anticipated:Vector2 = last_position + velocity * 0.12
-	tween.interpolate_method(self, "do_state_update_move", position, anticipated, 0.12)
-	tween.start()
+	if last_position != next_position:
+		tween.interpolate_method(self, "do_state_update_move", position, next_position, 0.12)
+		tween.start()
 
-	last_input = next_input
 	last_position = next_position
+
+	# not in use
+	# if last_input != next_input:
+	# 	pass
+	# last_input = next_input
+
 
 # uses network send_position_update tranform
 func do_state_update_move(new_position: Vector2) -> void:
@@ -96,12 +101,17 @@ func move_state(delta):
 		velocity = velocity.move_toward(input_vector * MAX_SPEED, ACCELERATION * delta)
 	else:
 		animationState.travel("Idle")
-		velocity = velocity.move_toward(Vector2.ZERO, FRICTION * delta)
+		# velocity = velocity.move_toward(Vector2.ZERO, FRICTION * delta)
+		velocity = Vector2.ZERO
 
-	if last_motion != input_vector:
-		Network.send_input_update(input_vector, MAX_SPEED)
+	# not in use
+	# if last_motion != input_vector:
+	# 	Network.send_input_update(input_vector, MAX_SPEED)
+	# last_motion = input_vector
 
-	last_motion = input_vector
+	if last_position != position:
+		Network.send_position_update(position)
+	last_position = position
 
 	move()
 
@@ -122,11 +132,6 @@ func attack_state():
 
 func move():
 	velocity = move_and_slide(velocity)
-
-	if last_position != position:
-		Network.send_position_update(position)
-
-	last_position = position
 
 func roll_animation_finished():
 	velocity = velocity * 0.8

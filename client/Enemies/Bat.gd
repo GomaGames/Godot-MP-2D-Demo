@@ -27,7 +27,7 @@ onready var wanderController = $WanderController
 onready var animationPlayer = $AnimationPlayer
 
 func _ready():
-	#state = pick_random_state([IDLE, WANDER])
+	# @DEV state = pick_random_state([IDLE, WANDER])
 	state = IDLE
 
 func _physics_process(delta):
@@ -67,8 +67,9 @@ func accelerate_towards_point(point, delta):
 
 func seek_player():
 	if playerDetectionZone.can_see_player():
-		state = CHASE
-
+		# @DEV state = CHASE
+		pass
+		
 func update_wander():
 	state = pick_random_state([IDLE, WANDER])
 	wanderController.start_wander_timer(rand_range(1, 3))
