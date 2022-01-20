@@ -19,7 +19,6 @@ var roll_vector = Vector2.DOWN
 var stats = PlayerStats
 
 var last_position := Vector2.ZERO
-var last_motion := Vector2.ZERO
 var last_rotation := Vector2.ZERO
 var last_input := Vector2.ZERO
 # from network
@@ -82,12 +81,13 @@ func despawn() -> void:
 	queue_free()
 
 func move_state(delta):
-	if !is_local_player():
-		return
-
 	var input_vector = Vector2.ZERO
-	input_vector.x = Input.get_action_strength("ui_right") - Input.get_action_strength("ui_left")
-	input_vector.y = Input.get_action_strength("ui_down") - Input.get_action_strength("ui_up")
+	if is_local_player():
+		input_vector.x = Input.get_action_strength("ui_right") - Input.get_action_strength("ui_left")
+		input_vector.y = Input.get_action_strength("ui_down") - Input.get_action_strength("ui_up")
+	else:
+		input_vector = next_input
+
 	input_vector = input_vector.normalized()
 
 	if input_vector != Vector2.ZERO:
@@ -104,10 +104,12 @@ func move_state(delta):
 		# velocity = velocity.move_toward(Vector2.ZERO, FRICTION * delta)
 		velocity = Vector2.ZERO
 
-	# not in use
-	# if last_motion != input_vector:
-	# 	Network.send_input_update(input_vector, MAX_SPEED)
-	# last_motion = input_vector
+	if !is_local_player():
+		return
+
+	if last_input != input_vector:
+		Network.send_input_update(input_vector, MAX_SPEED)
+	last_input = input_vector
 
 	if last_position != position:
 		Network.send_position_update(position)
