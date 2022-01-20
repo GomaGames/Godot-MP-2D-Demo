@@ -5,10 +5,7 @@ local world_control = {}
 
 local nk = require("nakama")
 
--- local SPAWN_POSITION = {1800.0, 1280.0}
-local SPAWN_POSITION = {0.0, 0.0, 0.0}
-local SPAWN_HEIGHT = 463.15
-local WORLD_WIDTH = 1500
+local SPAWN_POSITION = {0.0, 0.0}
 
 -- Custom operation codes. Nakama specific codes are <= 0.
 local OpCodes = {
@@ -16,10 +13,8 @@ local OpCodes = {
     update_rotation = 2,
     update_input = 3,
     update_state = 4,
-    update_jump = 5,
-    do_spawn = 6,
-    update_color = 7,
-    initial_state = 8
+    do_spawn = 5,
+    initial_state = 6
 }
 
 -- Command pattern table for boiler plate updates that uses data and state.
@@ -54,30 +49,9 @@ commands[OpCodes.update_rotation] = function(data, state)
     end
 end
 
--- Updates whether a character jumped in the game state
-commands[OpCodes.update_jump] = function(data, state)
-    local id = data.id
-    if state.inputs[id] ~= nil then
-        state.inputs[id].jmp = 1
-    end
-end
-
--- Updates the character color in the game state once the player's picked a character
+-- Does nothing for now
 commands[OpCodes.do_spawn] = function(data, state)
     local id = data.id
-    local color = data.col
-    if state.colors[id] ~= nil then
-        state.colors[id] = color
-    end
-end
-
--- Updates the character color in the game state after a player's changed colors
-commands[OpCodes.update_color] = function(data, state)
-    local id = data.id
-    local color = data.col
-    if state.colors[id] ~= nil then
-        state.colors[id] = color
-    end
 end
 
 -- When the match is initialized. Creates empty tables in the game state that will be populated by
@@ -88,8 +62,6 @@ function world_control.match_init(_, _)
         rotations = {}, -- direction the person is facing
         inputs = {}, -- anticipate move direction
         positions = {},
-        jumps = {},
-        colors = {},
         names = {}
     }
     local tickrate = 10
@@ -115,7 +87,6 @@ function world_control.match_join(_, dispatcher, _, state, presences)
         state.positions[presence.user_id] = {
             ["x"] = 0,
             ["y"] = 0,
-            ["z"] = 0
         }
 
         state.rotations[presence.user_id] = {
@@ -127,13 +98,9 @@ function world_control.match_join(_, dispatcher, _, state, presences)
             ["dir"] = {
                 ["x"] = 0,
                 ["y"] = 0,
-                ["z"] = 0
             },
             ["spd"] = 0,
-            ["jmp"] = 0
         }
-
-        state.colors[presence.user_id] = "1,1,1,1"
 
         state.names[presence.user_id] = "User"
     end
@@ -159,8 +126,6 @@ function world_control.match_leave(_, _, _, state, presences)
         state.positions[presence.user_id] = nil
         state.rotations[presence.user_id] = nil
         state.inputs[presence.user_id] = nil
-        state.jumps[presence.user_id] = nil
-        state.colors[presence.user_id] = nil
         state.names[presence.user_id] = nil
     end
     return state
@@ -206,7 +171,6 @@ function world_control.match_loop(_, dispatcher, _, state, messages)
                 state.positions[message.sender.user_id] = {
                     ["x"] = SPAWN_POSITION[1],
                     ["y"] = SPAWN_POSITION[2],
-                    ["z"] = SPAWN_POSITION[3]
                 }
             end
 
@@ -216,7 +180,6 @@ function world_control.match_loop(_, dispatcher, _, state, messages)
                 ["pos"] = state.positions,
                 ["rot"] = state.rotations,
                 ["inp"] = state.inputs,
-                ["col"] = state.colors,
                 ["nms"] = state.names
             }
 
@@ -237,10 +200,6 @@ function world_control.match_loop(_, dispatcher, _, state, messages)
     local encoded = nk.json_encode(data)
 
     dispatcher.broadcast_message(OpCodes.update_state, encoded)
-
-    for _, input in pairs(state.inputs) do
-        input.jmp = 0
-    end
 
     return state
 end

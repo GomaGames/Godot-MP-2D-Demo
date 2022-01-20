@@ -2,10 +2,10 @@ extends KinematicBody2D
 
 const PlayerHurtSound = preload("res://Player/PlayerHurtSound.tscn")
 
-export var ACCELERATION = 500
-export var MAX_SPEED = 80
-export var ROLL_SPEED = 120
-export var FRICTION = 500
+export onready var ACCELERATION = 500
+export onready var MAX_SPEED = 80
+export onready var ROLL_SPEED = 120
+export onready var FRICTION = 500
 
 enum {
 	MOVE,
@@ -18,12 +18,27 @@ var velocity = Vector2.ZERO
 var roll_vector = Vector2.DOWN
 var stats = PlayerStats
 
+var last_position := Vector2.ZERO
+var last_motion := Vector2.ZERO
+var last_rotation := Vector2.ZERO
+var last_input := Vector2.ZERO
+# from network
+var next_position := Vector2.ZERO
+var next_rotation := Vector2.ZERO
+var next_input := Vector2.ZERO
+var move_speed := 0
+
+export var username := "User"
+export var user_id := ""
+
 onready var animationPlayer = $AnimationPlayer
 onready var animationTree = $AnimationTree
 onready var animationState = animationTree.get("parameters/playback")
 onready var swordHitbox = $HitboxPivot/SwordHitbox
 onready var hurtbox = $Hurtbox
 onready var blinkAnimationPlayer = $BlinkAnimationPlayer
+onready var tween = $Tween
+
 
 func _ready():
 	randomize()
@@ -35,19 +50,41 @@ func _physics_process(delta):
 	match state:
 		MOVE:
 			move_state(delta)
-		
+
 		ROLL:
 			roll_state()
-		
+
 		ATTACK:
 			attack_state()
-	
+
+func is_local_player() -> bool:
+	return user_id == Network.get_user_id()
+
+# from network
+func update_state() -> void:
+	var anticipated:Vector2 = last_position + velocity * 0.12
+	tween.interpolate_method(self, "do_state_update_move", position, anticipated, 0.12)
+	tween.start()
+
+	last_input = next_input
+	last_position = next_position
+
+# uses network send_position_update tranform
+func do_state_update_move(new_position: Vector2) -> void:
+	position = new_position
+
+func despawn() -> void:
+	queue_free()
+
 func move_state(delta):
+	if !is_local_player():
+		return
+
 	var input_vector = Vector2.ZERO
 	input_vector.x = Input.get_action_strength("ui_right") - Input.get_action_strength("ui_left")
 	input_vector.y = Input.get_action_strength("ui_down") - Input.get_action_strength("ui_up")
 	input_vector = input_vector.normalized()
-	
+
 	if input_vector != Vector2.ZERO:
 		roll_vector = input_vector
 		swordHitbox.knockback_vector = input_vector
@@ -60,12 +97,17 @@ func move_state(delta):
 	else:
 		animationState.travel("Idle")
 		velocity = velocity.move_toward(Vector2.ZERO, FRICTION * delta)
-	
+
+	if last_motion != input_vector:
+		Network.send_input_update(input_vector, MAX_SPEED)
+
+	last_motion = input_vector
+
 	move()
-	
+
 	if Input.is_action_just_pressed("roll"):
 		state = ROLL
-	
+
 	if Input.is_action_just_pressed("attack"):
 		state = ATTACK
 
@@ -81,6 +123,11 @@ func attack_state():
 func move():
 	velocity = move_and_slide(velocity)
 
+	if last_position != position:
+		Network.send_position_update(position)
+
+	last_position = position
+
 func roll_animation_finished():
 	velocity = velocity * 0.8
 	state = MOVE
@@ -94,7 +141,7 @@ func _on_Hurtbox_area_entered(area):
 	hurtbox.create_hit_effect()
 	var playerHurtSound = PlayerHurtSound.instance()
 	get_tree().current_scene.add_child(playerHurtSound)
-	
+
 func _on_Hurtbox_invincibility_started():
 	blinkAnimationPlayer.play("Start")
 

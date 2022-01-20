@@ -839,10 +839,12 @@ stream = ExtResource( 8 )
 [node name="BlinkAnimationPlayer" type="AnimationPlayer" parent="."]
 anims/Start = SubResource( 48 )
 anims/Stop = SubResource( 49 )
+
+[node name="Tween" type="Tween" parent="."]
+
 [connection signal="area_entered" from="Hurtbox" to="." method="_on_Hurtbox_area_entered"]
 [connection signal="invincibility_ended" from="Hurtbox" to="." method="_on_Hurtbox_invincibility_ended"]
 [connection signal="invincibility_started" from="Hurtbox" to="." method="_on_Hurtbox_invincibility_started"]
 
 [editable path="HitboxPivot/SwordHitbox"]
-
 [editable path="Hurtbox"]

@@ -91,12 +91,12 @@ func _enter_tree() -> void:
 func _create_session() -> NakamaSession:
 	var uuid = uuid_util.v4()
 
-	var session : NakamaSession = yield(_client.authenticate_device_async(uuid), "completed")
-	if session.is_exception():
-			print("An error occured: %s" % session)
+	var new_session : NakamaSession = yield(_client.authenticate_device_async(uuid), "completed")
+	if new_session.is_exception():
+			print("An error occured: %s" % new_session)
 			return
-	print("Successfully authenticated: %s" % session)
-	return session
+	print("Successfully authenticated: %s" % new_session)
+	return new_session
 
 # Asynchronous coroutine. Creates a new socket and connects it to the live server.
 # Returns OK or a nakama error number. Error messages are stored in `ServerConnection.error_message`
@@ -138,22 +138,6 @@ func disconnect_from_server_async() -> int:
 			return OK
 
 	return parsed_result
-
-
-# Saves the email in the config file.
-func save_email(email: String) -> void:
-	EmailConfigWorker.save_email(email)
-
-
-# Gets the last email from the config file, or a blank string if missing.
-func get_last_email() -> String:
-	return EmailConfigWorker.get_last_email()
-
-
-# Removes the last email from the config file
-func clear_last_email() -> void:
-	EmailConfigWorker.clear_last_email()
-
 
 func get_user_id() -> String:
 	if session:
@@ -258,9 +242,9 @@ func store_last_player_character_async(name: String) -> int:
 
 
 # Sends a message to the server stating a change in position for the client.
-func send_position_update(position: Vector3) -> void:
+func send_position_update(position: Vector2) -> void:
 	if _socket:
-		var payload := {id = get_user_id(), pos = {x = position.x, y = position.y, z = position.z}}
+		var payload := {id = get_user_id(), pos = {x = position.x, y = position.y}}
 		_socket.send_match_state_async(_world_id, OpCodes.UPDATE_POSITION, JSON.print(payload))
 
 
@@ -272,9 +256,9 @@ func send_rotation_update(rotation: Vector2) -> void:
 
 
 # Sends a message to the server stating a change in motion input for the client.
-func send_input_update(motion: Vector3, move_speed: float) -> void:
+func send_input_update(motion: Vector2, move_speed: int) -> void:
 	if _socket:
-		var payload := {id = get_user_id(), inp = {x = motion.x, y = motion.y, z = motion.z}, spd = move_speed}
+		var payload := {id = get_user_id(), inp = {x = motion.x, y = motion.y}, spd = move_speed}
 		_socket.send_match_state_async(_world_id, OpCodes.UPDATE_INPUT, JSON.print(payload))
 
 
@@ -400,37 +384,3 @@ func _on_NamakaSocket_received_channel_message(message: NakamaAPI.ApiChannelMess
 func _no_set(_value) -> void:
 	pass
 
-
-# Helper class to manage functions that relate to local files that have to do with
-# authentication or login parameters, such as remembering email.
-class EmailConfigWorker:
-	const CONFIG := "user://config.ini"
-
-	# Saves the email to the config file.
-	static func save_email(email: String) -> void:
-		var file := ConfigFile.new()
-		#warning-ignore: return_value_discarded
-		file.load(CONFIG)
-		file.set_value("connection", "last_email", email)
-		#warning-ignore: return_value_discarded
-		file.save(CONFIG)
-
-	# Gets the last email from the config file, or a blank string.
-	static func get_last_email() -> String:
-		var file := ConfigFile.new()
-		#warning-ignore: return_value_discarded
-		file.load(CONFIG)
-
-		if file.has_section_key("connection", "last_email"):
-			return file.get_value("connection", "last_email")
-		else:
-			return ""
-
-	# Removes the last email from the config file.
-	static func clear_last_email() -> void:
-		var file := ConfigFile.new()
-		#warning-ignore: return_value_discarded
-		file.load(CONFIG)
-		file.set_value("connection", "last_email", "")
-		#warning-ignore: return_value_discarded
-		file.save(CONFIG)
