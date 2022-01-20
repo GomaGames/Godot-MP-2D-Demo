@@ -92,6 +92,11 @@ func _on_Network_presences_changed() -> void:
 func _on_Network_state_updated(positions: Dictionary, rotations: Dictionary, inputs: Dictionary) -> void:
 	var update := false
 	for key in characters:
+
+		# check if the character has been freed (disconnected)
+		if !is_instance_valid(characters[key]):
+			continue
+
 		update = false
 		if key in positions:
 			var next_position: Dictionary = positions[key]
