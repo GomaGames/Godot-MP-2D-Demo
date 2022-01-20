@@ -11,7 +11,7 @@ func _ready():
 		result = yield(Network.join_world_async(), "completed")
 	if result == OK:
 		# warning-ignore:return_value_discarded
-		get_tree().change_scene_to(load("res://World.tscn"))
+		get_tree().change_scene_to(load("res://Screens/World.tscn"))
 		Network.send_spawn(player_name)
 
 
